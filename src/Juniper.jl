@@ -1,6 +1,7 @@
 module Juniper
 
 using MathProgBase
+using ConicNonlinearBridge
 using JuMP
 using JSON
 

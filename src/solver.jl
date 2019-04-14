@@ -128,3 +128,10 @@ function JuniperSolver(nl_solver::MathProgBase.AbstractMathProgSolver;options...
     options_obj = combine_options(options)
     return JuniperSolverObj(nl_solver,options_obj)
 end
+
+
+# Create Pavito conic model
+MathProgBase.ConicModel(s::JuniperSolverObj) = MathProgBase.ConicModel(ConicNonlinearBridge.ConicNLPWrapper(nlp_solver=s))
+
+# Create Pavito LinearQuadratic model
+MathProgBase.LinearQuadraticModel(s::JuniperSolverObj) = MathProgBase.NonlinearToLPQPBridge(MathProgBase.NonlinearModel(s))

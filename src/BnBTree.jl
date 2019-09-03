@@ -128,7 +128,7 @@ function branch!(m, opts, step_obj, counter, disc2var_idx; temp=false)
                 push_integral_or_branch!(step_obj, cnode)
             end
         end
-        return step_obj.l_nd,step_obj.r_nd
+        return step_obj.l_nd, step_obj.r_nd
     end
 
     l_nd_u_var = copy(node.u_var)
@@ -181,7 +181,7 @@ function branch!(m, opts, step_obj, counter, disc2var_idx; temp=false)
         step_obj.branch_time += time()-start
     end
 
-    return l_nd,r_nd
+    return l_nd, r_nd
 end
 
 """
@@ -434,9 +434,24 @@ function sendto(p::Int; args...)
     end
 end
 
-function dummysolve()
-    global m
-    optimize!(m.model)
+function after_one_step!(tree, step_obj, time_obj, dictTree,
+                        time_bnb_solve_start,fields,field_chars, last_table_arr; p=1)
+
+    tree.m.nnodes += 2 # two nodes explored per branch
+    ps = tree.options.log_levels
+
+    bbreak = upd_tree_obj!(tree,step_obj,time_obj)
+    tree.options.debug && (dictTree = push_step2treeDict!(dictTree,step_obj))
+
+    if check_print(ps,[:Table])
+        if length(tree.branch_nodes) > 0
+            bvalue, nidx = findmax([tree.obj_fac*n.best_bound for n in tree.branch_nodes])
+            tree.best_bound = tree.obj_fac*bvalue
+        end
+        last_table_arr = print_table(p,tree,step_obj.node,step_obj,time_bnb_solve_start,fields,field_chars;last_arr=last_table_arr)
+    end
+
+    return bbreak, last_table_arr, dictTree
 end
 
 """
@@ -456,8 +471,8 @@ function pmap(f, tree, last_table_arr, time_bnb_solve_start,
     # in this case it's just an index.
     ps = tree.options.log_levels
     still_running = true
-    run_counter = 0
     counter = 0
+    run_counter = 0
 
     for p=2:np
         seed = Random.seed!
@@ -472,75 +487,82 @@ function pmap(f, tree, last_table_arr, time_bnb_solve_start,
         end
     end
 
-    for p=3:np
-        remotecall(dummysolve, p)
-    end
 
     proc_counter = zeros(np)
 
     dictTree = Dict{Any,Any}()
+    bbreak = false
 
-    branch_strat = tree.options.branch_strategy
     opts = tree.options
-    @sync begin
-        for p=1:np
-            if p != myid() || np == 1
-                @async begin
-                    while true
-                        exists, bbreak, step_obj = get_next_branch_node!(tree)
-                        if bbreak
-                            still_running = false
-                            break
-                        end
+    branch_strat = tree.options.branch_strategy
+    # if strong branching is used => run it in parallel with the processor #1 being the master
+    if branch_strat == :StrongPseudoCost || branch_strat == :Reliability
+        exists, bbreak, step_obj = get_next_branch_node!(tree)
+        if exists && !bbreak
+            counter += 1
+            if isdefined(tree,:incumbent)
+                step_obj = f(tree.m, tree.incumbent, tree.options, step_obj,
+                                tree.disc2var_idx, tree.obj_gain, counter)
+            else
+                step_obj = f(tree.m, nothing, tree.options, step_obj,
+                                tree.disc2var_idx, tree.obj_gain, counter)
+            end
 
-                        while !exists && still_running
-                            sleep(0.1)
+            bbreak, last_table_arr, dictTree = after_one_step!(tree, step_obj, time_obj, dictTree,
+                                                    time_bnb_solve_start,fields,field_chars, last_table_arr; p=myid())
+        end
+    end
+
+    if !bbreak && length(tree.branch_nodes) > 0
+        @sync begin
+            for p=1:np
+                if p != myid() || np == 1
+                    @async begin
+                        while true
                             exists, bbreak, step_obj = get_next_branch_node!(tree)
-                            exists && break
                             if bbreak
                                 still_running = false
                                 break
                             end
-                        end
-                        !still_running && break
 
-                        if isbreak_after_step!(tree)
-                            still_running = false
-                            break
-                        end
-
-                        run_counter += 1
-                        counter += 1
-                        if isdefined(tree,:incumbent)
-                            step_obj = remotecall_fetch(f, p, nothing, tree.incumbent, tree.options, step_obj,
-                                                        tree.disc2var_idx, tree.obj_gain, counter)
-                        else
-                            step_obj = remotecall_fetch(f, p, nothing, nothing, tree.options, step_obj,
-                            tree.disc2var_idx, tree.obj_gain, counter)
-                        end
-                        tree.m.nnodes += 2 # two nodes explored per branch
-                        run_counter -= 1
-
-                        !still_running && break
-
-                        bbreak = upd_tree_obj!(tree,step_obj,time_obj)
-                        tree.options.debug && (dictTree = push_step2treeDict!(dictTree,step_obj))
-
-                        if run_counter == 0 && length(tree.branch_nodes) == 0
-                            still_running = false
-                        end
-
-                        bbreak && (still_running = false)
-
-                        if check_print(ps,[:Table])
-                            if length(tree.branch_nodes) > 0
-                                bvalue, nidx = findmax([tree.obj_fac*n.best_bound for n in tree.branch_nodes])
-                                tree.best_bound = tree.obj_fac*bvalue
+                            while !exists && still_running
+                                sleep(0.1)
+                                exists, bbreak, step_obj = get_next_branch_node!(tree)
+                                exists && break
+                                if bbreak
+                                    still_running = false
+                                    break
+                                end
                             end
-                            last_table_arr = print_table(p,tree,step_obj.node,step_obj,time_bnb_solve_start,fields,field_chars;last_arr=last_table_arr)
-                        end
+                            !still_running && break
 
-                        !still_running && break
+                            if isbreak_after_step!(tree)
+                                still_running = false
+                                break
+                            end
+                            counter += 1
+                            run_counter += 1
+                            if isdefined(tree,:incumbent)
+                                step_obj = remotecall_fetch(f, p, nothing, tree.incumbent, tree.options, step_obj,
+                                                            tree.disc2var_idx, tree.obj_gain, counter)
+                            else
+                                step_obj = remotecall_fetch(f, p, nothing, nothing, tree.options, step_obj,
+                                tree.disc2var_idx, tree.obj_gain, counter)
+                            end
+                            run_counter -= 1
+                
+                            bbreak, last_table_arr, dictTree = after_one_step!(tree, step_obj, time_obj, dictTree,
+                                                                time_bnb_solve_start,fields,field_chars, last_table_arr; p=p)
+                            
+                            !still_running && break
+                            
+                            if run_counter == 0 && length(tree.branch_nodes) == 0
+                                still_running = false
+                            end
+
+                            bbreak && (still_running = false)
+                            !still_running && break
+                        end
                     end
                 end
             end

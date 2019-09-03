@@ -152,6 +152,10 @@ mutable struct BnBNode
     hash                :: String
 end
 
+function Base.copy(b::BnBNode) 
+    return BnBNode(b.idx, b.level, copy(b.l_var), copy(b.u_var), copy(b.solution), b.var_idx, b.state, b.relaxation_state, b.best_bound, copy(b.path), b.hash)
+end
+
 mutable struct Incumbent
     objval      :: Float64
     solution    :: Vector{Float64}
@@ -219,6 +223,38 @@ mutable struct StepObj
     strong_branching    :: Union{Nothing,Vector{StrongBranchStep}} # used only if debug=true and branch_strategy of this step is :Strong
 
     StepObj() = new()
+end
+
+function Base.copy(s::StepObj) 
+    step_obj = StepObj()
+    for f in fieldnames(StepObj)
+        if isdefined(s,f)
+            if isa(getfield(s,f), BnBNode) || isa(getfield(s,f), Vector)
+                setfield!(step_obj, f, copy(getfield(s,f)))
+            else
+                setfield!(step_obj, f, getfield(s,f))
+            end
+        end
+    end
+
+    return step_obj
+end
+
+mutable struct StrongObj
+    rank                    :: Int64
+    step_obj                :: StepObj
+    restart                 :: Bool
+    max_gain                :: Float64
+    max_gain_var            :: Int64
+    max_gain_disc_var       :: Int64
+    need_to_resolve         :: Bool
+    left_node               :: Union{Nothing, BnBNode}
+    right_node              :: Union{Nothing, BnBNode}
+    gains                   :: GainObj
+    set_to_last_var         :: Bool
+    infeasible_disc_vars    :: Vector{Int64}
+
+    StrongObj() = new()
 end
 
 mutable struct TimeObj

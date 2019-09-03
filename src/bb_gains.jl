@@ -76,8 +76,8 @@ function upd_gains_step!(tree, step_obj)
             strong_disc_vars = findall(cum_counter .> 0)
             step_obj.strong_disc_vars = strong_disc_vars
             # all other variables that haven't been checked get the median value of the others
-            med_gain_m = median(tree.obj_gain.minus[strong_disc_vars])
-            med_gain_p = median(tree.obj_gain.plus[strong_disc_vars])
+            med_gain_m = median(tree.obj_gain.minus[strong_disc_vars] ./ tree.obj_gain.minus_counter[strong_disc_vars])
+            med_gain_p = median(tree.obj_gain.plus[strong_disc_vars] ./ tree.obj_gain.plus_counter[strong_disc_vars])
             rest = filter(i->!(i in strong_disc_vars),1:tree.m.num_disc_var)
             tree.obj_gain.minus[rest] .= med_gain_m
             tree.obj_gain.plus[rest] .= med_gain_p

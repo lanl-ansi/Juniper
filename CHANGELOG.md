@@ -1,5 +1,8 @@
 # Juniper.jl Changelog
 
+### Unreleased
+- Running strong branching in parallel
+
 ### 0.5.0
 - Upgraded to MOI 0.9.1 and JuMP v0.20.0
   - Implementation of `TimeLimitSec`, `Silent` & `RawParameter`

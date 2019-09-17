@@ -153,6 +153,10 @@ Then you have to specify the number of processor as an option.
 The number of processors used for the branch and bound part. **Attention:** Even if you start julia using
 `julia -p P` you still have to define the number of processors using this option.
 
+### two\_processors\_per\_node::Bool [true]
+
+In the branch and bound part of Juniper each branching node has two children these will be computed in parallel using two processors when set to `true` and Juniper is running in parallel. If `false` the two processors will be used instead to compute two open nodes in parallel.
+
 ## Feasibility Pump
 
 Juniper has the option to find a feasible solution before the branch and bound part starts. The following options describe how to use the feasibility pump.

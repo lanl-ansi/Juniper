@@ -323,7 +323,7 @@ function MOI.optimize!(model::Optimizer)
     nw = nworkers()
     if nw < jp.options.processors
         jp.options.processors = nw
-        @warn "Julia was started with less processors than you defined in your options. Start julia with: `julia -p "*string(jp.options.processors)*"`"
+        @warn "Julia was started with less processors than you defined in your options. Start julia with: `julia -p X`"
     end
 
     create_root_model!(model, jp)

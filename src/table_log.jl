@@ -110,7 +110,7 @@ function get_table_line(p, tree, node, step_obj, start_time, fields, field_chars
     for f in fields
         val = ""
         if f == :p
-            val = string(p)
+            val = join(p,",")
         elseif f == :ONodes
             val = string(length(tree.branch_nodes))
         elseif f == :Incumbent

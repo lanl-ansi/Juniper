@@ -30,6 +30,9 @@ function get_default_options()
     list_of_solutions                   = false
     # Parallel  
     processors                          = 1
+    # if true two processors are solving the same node one the left child and one the right child
+    two_processors_per_node             = true 
+
     # Traversing    
     traverse_strategy                   = :BFS
     # Feasibility Pump  
@@ -56,7 +59,7 @@ function get_default_options()
         strong_branching_perc,strong_branching_nsteps,strong_branching_time_limit,strong_restart,
         reliability_branching_threshold,reliability_branching_perc,
         incumbent_constr,obj_epsilon,time_limit,mip_gap,best_obj_stop,solution_limit,all_solutions,
-        list_of_solutions,processors,traverse_strategy,
+        list_of_solutions,processors,two_processors_per_node,traverse_strategy,
         feasibility_pump,feasibility_pump_time_limit,feasibility_pump_tolerance_counter,
         tabu_list_length,num_resolve_nlp_feasibility_pump,
         mip_solver, allow_almost_solved, allow_almost_solved_integral, registered_functions, 

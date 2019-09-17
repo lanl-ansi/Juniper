@@ -72,6 +72,36 @@ end
     @test Juniper.getnsolutions(internalmodel(m)) >= 1
 end
 
+@testset "Two processors per node = false" begin
+    println("==================================")
+    println("Two processors per node = false")
+    println("==================================")
+
+    juniper_one_proc_per_node = DefaultTestSolver(
+        two_processors_per_node = false,
+        mip_solver=with_optimizer(Cbc.Optimizer, logLevel=0),
+        processors = 3
+    )
+    
+    m = Model()
+
+    v = [10,20,12,23,42]
+    w = [12,45,12,22,21]
+    @variable(m, x[1:5], Bin)
+
+    @objective(m, Max, dot(v,x))
+
+    @NLconstraint(m, sum(w[i]*x[i]^2 for i=1:5) <= 45)   
+
+    set_optimizer(m, with_optimizer(
+        Juniper.Optimizer,
+        juniper_one_proc_per_node
+    ))
+    
+    status = solve(m)
+    @test Juniper.state_is_optimal(status)
+end
+
 @testset "Knapsack Max Reliable incumbent_constr" begin
     println("==================================")
     println("KNAPSACK Reliable incumbent_constr")

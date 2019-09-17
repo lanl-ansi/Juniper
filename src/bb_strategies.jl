@@ -255,6 +255,12 @@ Try to branch on a few different variables and choose the one with highest obj_g
 Update obj_gain for the variables tried and average the other ones.
 """
 function branch_strong!(m,opts,disc2var_idx,step_obj,counter)
+    if myid() != 1
+        global procs_available
+    else
+        procs_available = [1]
+    end
+
     node = step_obj.node
 
     # generate an of variables to branch on
@@ -291,6 +297,12 @@ function branch_strong!(m,opts,disc2var_idx,step_obj,counter)
 end
 
 function branch_reliable!(m,opts,step_obj,disc2var_idx,gains,counter) 
+    if myid() != 1
+        global procs_available
+    else
+        procs_available = [1]
+    end
+
     idx = 0
     node = step_obj.node
     mu = opts.gain_mu

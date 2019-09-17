@@ -32,6 +32,7 @@ mutable struct SolverOptions
     all_solutions                       :: Bool
     list_of_solutions                   :: Bool
     processors                          :: Int64
+    two_processors_per_node             :: Bool
     traverse_strategy                   :: Symbol
     feasibility_pump                    :: Bool
     feasibility_pump_time_limit         :: Float64
@@ -50,6 +51,12 @@ mutable struct SolverOptions
     debug_file_path                     :: String
 
     fixed_gain_mu                       :: Bool
+end
+
+struct NodeSolution
+    status      :: MOI.TerminationStatusCode
+    objval      :: Float64
+    solution    :: Vector{Float64}
 end
 
 mutable struct SolutionObj

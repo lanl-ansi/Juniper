@@ -51,3 +51,18 @@ const config = MOIT.TestConfig(atol=1e-4, rtol=1e-4, optimal_status=MOI.LOCALLY_
                ]
     MOIT.unittest(bridged, config, exclude)
 end
+
+@testset "Integer Conic" begin
+    conic_optimizer = MOI.instantiate(
+        MOI.OptimizerWithAttributes(
+            Juniper.Optimizer,
+            MOI.Silent() => true,
+            "nl_solver" => MOI.OptimizerWithAttributes(
+                SCS.Optimizer,
+                MOI.Silent() => true,
+            ),
+        ),
+        with_bridge_type=Float64,
+    )
+    MOI.Test.intconictest(conic_optimizer, config)
+end
